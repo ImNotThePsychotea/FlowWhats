@@ -1,0 +1,117 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  password      String
+  name          String
+  role          Role     @default(USER)
+  trialEndsAt   DateTime?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  whatsappAccounts WhatsAppAccount[]
+  flows           Flow[]
+  payments        Payment[]
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+model WhatsAppAccount {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  phoneNumber String   @unique
+  token       String
+  isConnected Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  flows Flow[]
+}
+
+model Flow {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  whatsappAccountId String
+  whatsappAccount WhatsAppAccount @relation(fields: [whatsappAccountId], references: [id])
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  trigger     Trigger?
+  actions     Action[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Trigger {
+  id          String   @id @default(uuid())
+  flowId      String
+  flow        Flow     @relation(fields: [flowId], references: [id])
+  type        TriggerType
+  config      Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum TriggerType {
+  KEYWORD
+  TIME_BASED
+  MESSAGE_RECEIVED
+}
+
+model Action {
+  id          String   @id @default(uuid())
+  flowId      String
+  flow        Flow     @relation(fields: [flowId], references: [id])
+  type        ActionType
+  config      Json
+  order       Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum ActionType {
+  SEND_MESSAGE
+  SEND_MEDIA
+  SET_ATTRIBUTE
+  SEND_TO_OPERATOR
+  EXTERNAL_WEBHOOK
+}
+
+model Payment {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  amount      Float
+  status      PaymentStatus
+  gateway     PaymentGateway
+  gatewayId   String?
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum PaymentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  REFUNDED
+}
+
+enum PaymentGateway {
+  MERCADO_PAGO
+}
